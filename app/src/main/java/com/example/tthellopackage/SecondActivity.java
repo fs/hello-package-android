@@ -25,13 +25,14 @@ import com.vidyo.VidyoClient.Connector.ConnectorPkg;
 import com.vidyo.VidyoClient.Device.Device;
 import com.vidyo.VidyoClient.Device.LocalCamera;
 import com.vidyo.VidyoClient.Endpoint.LogRecord;
-import com.vidyo.VidyoClient.Endpoint.Participant;
 import com.vidyo.VidyoClient.NetworkInterface;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.example.tthellopackage.MainActivity.EXTRA_NAME;
 
 public class SecondActivity extends Activity implements
         View.OnClickListener,
@@ -43,8 +44,8 @@ public class SecondActivity extends Activity implements
 
     private static final String PORTAL_EXTRA_NAME = "PORTAL_EXTRA_NAME";
     private static final String ROOM_EXTRA_NAME = "ROOM_EXTRA_NAME";
+    private static final String TOKEN_EXTRA_NAME = "TOKEN_EXTRA_NAME";
     private static final String NAME_EXTRA_NAME = "NAME_EXTRA_NAME";
-    private static final String PIN_EXTRA_NAME = "PIN_EXTRA_NAME";
 
     // Define the various states of this application.
     enum VidyoConnectorState {
@@ -57,12 +58,13 @@ public class SecondActivity extends Activity implements
         FailureInvalidResource
     }
 
-    public static Intent intent(Context context, String portal, String room, String name, String pin) {
+    public static Intent intent(Context context, String host, String token, String room,
+                                String name) {
         return new Intent(context, SecondActivity.class)
-                .putExtra(PORTAL_EXTRA_NAME, portal)
+                .putExtra(PORTAL_EXTRA_NAME, host)
                 .putExtra(ROOM_EXTRA_NAME, room)
-                .putExtra(NAME_EXTRA_NAME, name)
-                .putExtra(PIN_EXTRA_NAME, pin);
+                .putExtra(TOKEN_EXTRA_NAME, token)
+                .putExtra(NAME_EXTRA_NAME, name);
     }
 
     // Map the application state to the status to display in the toolbar.
@@ -198,30 +200,6 @@ public class SecondActivity extends Activity implements
                     this.startVideoViewSizeListener();
                 }
 
-                mVidyoConnector.registerParticipantEventListener(new Connector.IRegisterParticipantEventListener() {
-                    @Override
-                    public void onParticipantJoined(Participant participant) {
-                        mLogger.Log("IRegisterParticipantEventListener onParticipantJoined");
-                    }
-
-                    @Override
-                    public void onParticipantLeft(Participant participant) {
-                        mLogger.Log("IRegisterParticipantEventListener onParticipantLeft");
-                        mToggleConnectButton.setChecked(false);
-                        toggleConnect();
-                    }
-
-                    @Override
-                    public void onDynamicParticipantChanged(ArrayList<Participant> arrayList) {
-                        mLogger.Log("IRegisterParticipantEventListener onDynamicParticipantChanged");
-                    }
-
-                    @Override
-                    public void onLoudestParticipantChanged(Participant participant, boolean b) {
-                        mLogger.Log("IRegisterParticipantEventListener onLoudestParticipantChanged");
-                    }
-                });// set room pin ahead of build if needed
-
             } catch (Exception e) {
                 mLogger.Log("Connector Construction failed");
                 mLogger.Log(e.getMessage());
@@ -234,18 +212,6 @@ public class SecondActivity extends Activity implements
         mLogger.Log("onStart");
         toggleConnect();
         super.onStart();
-    }
-
-    @Override
-    protected void onResume() {
-        mLogger.Log("onResume");
-        super.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        mLogger.Log("onPause");
-        super.onPause();
     }
 
     @Override
@@ -343,10 +309,6 @@ public class SecondActivity extends Activity implements
         }
     }
 
-    /*
-     * Private Utility Functions
-     */
-
     // Listen for UI changes to the view where the video is rendered.
     private void startVideoViewSizeListener() {
         mLogger.Log("startVideoViewSizeListener");
@@ -371,7 +333,7 @@ public class SecondActivity extends Activity implements
 
     // The state of the VidyoConnector connection changed, reconfigure the UI.
     // If connected, dismiss the controls layout
-    private void changeState(VidyoConnectorState state) {
+    private void changeState(final VidyoConnectorState state) {
         mLogger.Log("changeState: " + state.toString());
 
         mVidyoConnectorState = state;
@@ -486,20 +448,14 @@ public class SecondActivity extends Activity implements
 
             Bundle extras = getIntent().getExtras();
             assert extras != null;
-            String portal = extras.getString(PORTAL_EXTRA_NAME, "");
-            String roomKey = extras.getString(ROOM_EXTRA_NAME, "");
+            String host = extras.getString(PORTAL_EXTRA_NAME, "");
             String displayName = extras.getString(NAME_EXTRA_NAME, "");
-            String roomPin = extras.getString(PIN_EXTRA_NAME, "");
+            String token = extras.getString(TOKEN_EXTRA_NAME, "");
+            String roomId = extras.getString(ROOM_EXTRA_NAME, "");
 
-            if (!mVidyoConnector.connectToRoomAsGuest(
-                    portal,
-                    displayName.trim(),
-                    roomKey,
-                    roomPin,
-                    this)) {
-                // Connect failed.
-                this.changeState(VidyoConnectorState.Failure);
-            }
+            mVidyoConnector.connect(
+                    host, token, displayName, roomId, this
+            );
 
             mLogger.Log("VidyoConnectorConnect status = " + (mVidyoConnectorState == VidyoConnectorState.Connecting));
         } else {
@@ -537,6 +493,10 @@ public class SecondActivity extends Activity implements
     @Override
     public void onFailure(Connector.ConnectorFailReason reason) {
         mLogger.Log("onFailure: connection attempt failed, reason = " + reason.toString());
+
+        setResult(RESULT_OK,
+                new Intent().putExtra(EXTRA_NAME, reason.toString()));
+        finish();
         this.changeState(VidyoConnectorState.Failure);
     }
 
