@@ -3,6 +3,7 @@ package com.example.tthellopackage
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -26,14 +27,19 @@ class MainActivity : AppCompatActivity() {
                     loadingVisibility(true)
                 }
                 try {
-                    val response = getRoom(RoomRequest(USER_NAME))
+                    val response = getRoom(RoomRequest(et_userid.text.toString().toInt()))
                     if (response.isSuccessful && response.body() != null) {
                         val room = response.body()!!.room
+                        Log.d("MainActivityLog",
+                                "HOST_URL = " + HOST_URL +
+                                        "; token = " + response.body()!!.meta.token +
+                                        "; room.name = " + room.name +
+                                        "; USER_ID = " + et_userid.text)
                         startToCall(
-                            HOST_URL,
-                            response.body()!!.meta.token,
-                            room.name,
-                            USER_NAME)
+                                HOST_URL,
+                                response.body()!!.meta.token,
+                                room.name,
+                                et_userid.text.toString().toInt())
                     } else {
                         //Handle unsuccessful response
                     }
@@ -54,24 +60,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startToCall(
-        host: String, token: String, resourceId: String, userName: String
+            host: String, token: String, resourceId: String, userName: Int
     ) {
         startActivityForResult(
-            SecondActivity.intent(
-                this, host, token, resourceId, userName
-            ),
-            REQUEST_CODE
+                SecondActivity.intent(
+                        this, host, token, resourceId, userName
+                ),
+                REQUEST_CODE
         )
     }
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl("https://private-f3113-hellopackageapi.apiary-mock.com")
-        .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
-        .client(OkHttpClient.Builder().build())
-        .build()
+            .baseUrl("https://fsconferenceapp.herokuapp.com/")
+            .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
+            .client(OkHttpClient.Builder().build())
+            .build()
 
     private suspend fun getRoom(roomRequest: RoomRequest) =
-        retrofit.create(Api::class.java).getRoomAsync(roomRequest)
+            retrofit.create(Api::class.java).getRoomAsync(roomRequest)
 
     private fun loadingVisibility(visible: Boolean) {
         if (visible) {
@@ -93,7 +99,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val REQUEST_CODE = 1234
         const val EXTRA_NAME = "EXTRA_NAME"
-        const val USER_NAME = "Kiosk N1"
+        const val USER_NAME = 2
         const val HOST_URL = "prod.vidyo.io"
     }
 }

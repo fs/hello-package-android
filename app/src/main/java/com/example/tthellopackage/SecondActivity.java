@@ -59,7 +59,7 @@ public class SecondActivity extends Activity implements
     }
 
     public static Intent intent(Context context, String host, String token, String room,
-                                String name) {
+                                Integer name) {
         return new Intent(context, SecondActivity.class)
                 .putExtra(PORTAL_EXTRA_NAME, host)
                 .putExtra(ROOM_EXTRA_NAME, room)
@@ -449,12 +449,12 @@ public class SecondActivity extends Activity implements
             Bundle extras = getIntent().getExtras();
             assert extras != null;
             String host = extras.getString(PORTAL_EXTRA_NAME, "");
-            String displayName = extras.getString(NAME_EXTRA_NAME, "");
+            Integer displayName = extras.getInt(NAME_EXTRA_NAME, 0);
             String token = extras.getString(TOKEN_EXTRA_NAME, "");
             String roomId = extras.getString(ROOM_EXTRA_NAME, "");
 
             mVidyoConnector.connect(
-                    host, token, displayName, roomId, this
+                    host, token, displayName.toString(), roomId, this
             );
 
             mLogger.Log("VidyoConnectorConnect status = " + (mVidyoConnectorState == VidyoConnectorState.Connecting));
